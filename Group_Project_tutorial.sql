@@ -6,6 +6,8 @@ scp "/Users/mityakim/Desktop/Austin.zip" dkim171@129.146.230.230:/home/dkim171/
 scp "/Users/mityakim/Desktop/Dallas.zip" dkim171@129.146.230.230:/home/dkim171/
 scp "/Users/mityakim/Desktop/Chicago.zip" dkim171@129.146.230.230:/home/dkim171/
 
+scp "/Users/mityakim/Desktop/Austin_Crime.csv" dkim171@129.146.230.230:/home/dkim171/
+
 -- Enter to the server
 ssh dkim171@129.146.230.230
 
@@ -57,6 +59,7 @@ hdfs dfs -ls Chicago/ChicagoCrime/
 
 -- Austin -----------------------------------------------------------------------------
 hdfs dfs -put Austin_APD_Computer_Aided_Dispatch_Incidents.csv Austin/AustinCrime/
+hdfs dfs -put Austin_Crime.csv Austin/AustinCrime/
 hdfs dfs -put Austin_Population.csv Austin/AustinPop/
 -- check 
 hdfs dfs -ls Austin/AustinPop/
@@ -174,7 +177,7 @@ select * from la_crime_present LIMIT 10;
 DROP TABLE IF EXISTS la_population;
 CREATE EXTERNAL TABLE IF NOT EXISTS la_population(
     Year INT,
-    Population STRING,
+    Population INT,
     `Year on Year Change` STRING,  
     `Change in Percent` STRING     
 )
@@ -229,7 +232,7 @@ select * from chicago_crime LIMIT 100;
 DROP TABLE IF EXISTS chicago_population;
 CREATE EXTERNAL TABLE IF NOT EXISTS chicago_population(
     Year INT,
-    Population STRING,
+    Population INT,
     `Year on Year Change` STRING,  
     `Change in Percent` STRING     
 )
@@ -243,7 +246,7 @@ TBLPROPERTIES ('skip.header.line.count'='1');
 "
 -- check if table exists
 show tables;
-select * from chicago_population LIMIT 10;
+select * from chicago_population;
 
 --/-----------------------------------------------------------------------------------/-- 
 --/----------------------------------Austin-------------------------------------------/-- 
@@ -251,32 +254,24 @@ select * from chicago_population LIMIT 10;
 -- create austin_crime table
 DROP TABLE IF EXISTS austin_crime;
 CREATE EXTERNAL TABLE IF NOT EXISTS austin_crime(
-    Incident_Number INT,
-    Incident_Type STRING,
-    Council_District INT,
-    Mental_Health_Flag STRING,
-    Priority_Level STRING,
-    Response_Datetime STRING,
-    Response_Year STRING,
-    Response_Month STRING,
-    Response_Day_of_Week STRING,
-    Response_Hour STRING,
-    First_Unit_Arrived_Datetime STRING,
-    Call_Closed_Datetime STRING,
-    Sector STRING,
-    Initial_Problem_Description STRING,
-    Initial_Problem_Category STRING,
-    Final_Problem_Description STRING,
-    Final_Problem_Category STRING,
-    Number_of_Units_Arrived STRING,
-    Unit_Time_on_Scene STRING,
-    Call_Disposition_Description STRING,
-    Report_Written_Flag STRING,
-    Response_Time STRING,
-    Officer_Injured_Killed_Count STRING,
-    Subject_Injured_Killed_Count STRING,
-    Other_Injured_Killed_Count STRING,
-    Geo_ID STRING,
+    Incident_Number STRING, 
+    Highest_Offense_Description STRING, 
+    Highest_Offense_Code INT, 
+    Family_Violence STRING, 
+    Occurred_Date_Time STRING, 
+    Occurred_Date STRING, 
+    Occurred_Time STRING, 
+    Report_Date_Time STRING, 
+    Report_Date STRING, 
+    Report_Time STRING, 
+    Location_Type STRING, 
+    Council_District STRING, 
+    APD_Sector STRING, 
+    APD_District STRING, 
+    Clearance_Status STRING, 
+    Clearance_Date STRING, 
+    UCR_Category STRING, 
+    Category_Description STRING, 
     Census_Block_Group STRING)
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
 STORED AS TEXTFILE LOCATION '/user/dkim171/Austin/AustinCrime/'
@@ -290,7 +285,7 @@ select * from austin_crime LIMIT 10;
 DROP TABLE IF EXISTS austin_population;
 CREATE EXTERNAL TABLE IF NOT EXISTS austin_population(
     Year INT,
-    Population STRING,
+    Population INT,
     `Year on Year Change` STRING,  
     `Change in Percent` STRING     
 )
@@ -415,7 +410,7 @@ select * from dallas_crime LIMIT 10;
 DROP TABLE IF EXISTS dallas_population;
 CREATE EXTERNAL TABLE IF NOT EXISTS dallas_population(
     Year INT,
-    Population STRING,
+    Population INT,
     `Year on Year Change` STRING,  
     `Change in Percent` STRING     
 )
@@ -438,64 +433,10 @@ select * from dallas_population;
 -- create on union tabelfor la_crime_data
 DROP TABLE IF EXISTS la_crime_union;
 CREATE TABLE la_crime_union AS
-SELECT DR_NO,
-    Date_Rpt,
-    DATE_OCC,
-    TIME_OCC,
-    AREA,
-    AREA_NAME,
-    RptDist_No,
-    Part_1_2,
-    Crm_Cd,
-    Crm_Cd_Desc,
-    Mocodes,
-    Vict_Age,
-    Vict_Sex,
-    Vict_Descent,
-    Premis_Cd,
-    Premis_Desc,
-    Weapon_Used_Cd,
-    Weapon_Desc,
-    Status,
-    Status_Desc,
-    Crm_Cd_1,
-    Crm_Cd_2,
-    Crm_Cd_3,
-    Crm_Cd_4,
-    LOCATION,
-    Cross_Street,
-    LAT,
-    LON
+SELECT *
 FROM la_crime_10_19
 UNION ALL
-SELECT DR_NO,
-    Date_Rpt,
-    DATE_OCC,
-    TIME_OCC,
-    AREA,
-    AREA_NAME,
-    RptDist_No,
-    Part_1_2,
-    Crm_Cd,
-    Crm_Cd_Desc,
-    Mocodes,
-    Vict_Age,
-    Vict_Sex,
-    Vict_Descent,
-    Premis_Cd,
-    Premis_Desc,
-    Weapon_Used_Cd,
-    Weapon_Desc,
-    Status,
-    Status_Desc,
-    Crm_Cd_1,
-    Crm_Cd_2,
-    Crm_Cd_3,
-    Crm_Cd_4,
-    LOCATION,
-    Cross_Street,
-    LAT,
-    LON
+SELECT *
 FROM la_crime_present;
 
 -- check if table exists
@@ -514,7 +455,9 @@ select * from la_crime_union LIMIT 10;
 DROP TABLE IF EXISTS la_only_nessasary_columns;
 CREATE TABLE la_only_nessasary_columns AS
 SELECT 
+    CAST((SUBSTR(Date_rpt, 7, 4)) AS INT)AS `year`, 
     CAST(CONCAT(SUBSTR(date_rpt, 7, 4), '-', SUBSTR(date_rpt, 1, 2), '-', SUBSTR(date_rpt, 4, 2)) AS DATE) AS full_date,
+    Crm_Cd,
     crm_cd_desc,
     DR_NO,
     'Los Angeles' AS city,
@@ -528,97 +471,217 @@ select * from la_only_nessasary_columns LIMIT 100;
 -- create table la_crimes_with_population
 DROP TABLE IF EXISTS la_crimes_with_population;
 CREATE TABLE la_crimes_with_population AS
-SELECT 
-    c.full_date,
-    c.crm_cd_desc,
-    DR_NO,
-    c.city,
-    p.population,
-    LAT,  
-    LON,
-    p.year AS population_year
-FROM 
-    la_only_nessasary_columns c
-JOIN 
-    la_population p
-ON 
-    YEAR(c.full_date) = p.year 
-ORDER BY 
-    YEAR(c.full_date);
+SELECT
+   c.year,
+   c.full_date,
+   c.Crm_Cd,
+   c.crm_Cd_desc,
+   c.DR_NO,
+   c.city,
+   p.population,
+   c.LAT, 
+   c.LON
+FROM
+   la_only_nessasary_columns c
+LEFT JOIN
+   la_population p
+ON
+   c.year = p.year
+ORDER BY
+   YEAR(c.full_date);
 
 -- check la_crimes_with_population
 show tables;
 select * from la_crimes_with_population LIMIT 100;
 
--- create final file
--- Create the new table la_output
-DROP TABLE IF EXISTS la_output;
-CREATE TABLE la_output AS
-SELECT
-    full_date,
-    CASE
-        -- Crimes Against Persons
-        WHEN crm_cd_desc LIKE '%ASSAULT%' 
-            OR crm_cd_desc LIKE '%HOMICIDE%' 
-            OR crm_cd_desc LIKE '%BATTERY%' 
-            OR crm_cd_desc LIKE '%KIDNAPPING%'
-            OR crm_cd_desc LIKE '%SEXUAL%' 
-            OR crm_cd_desc LIKE '%RAPE%' 
-            OR crm_cd_desc LIKE '%CHILD ABUSE%' 
-            OR crm_cd_desc LIKE '%INTIMATE PARTNER%' 
-            OR crm_cd_desc LIKE '%EXTORTION%' 
-            OR crm_cd_desc LIKE '%BRANDISH WEAPON%'
-        THEN 'Crimes Against Persons'
-        
-        -- Financial & Fraud-Related Crimes
-        WHEN crm_cd_desc LIKE '%THEFT OF IDENTITY%' 
-            OR crm_cd_desc LIKE '%FORGERY%' 
-            OR crm_cd_desc LIKE '%FRAUD%' 
-            OR crm_cd_desc LIKE '%STOLEN%'
-        THEN 'Financial & Fraud-Related Crimes'
-        
-        -- Property Crimes
-        WHEN crm_cd_desc LIKE '%BURGLARY%' 
-            OR crm_cd_desc LIKE '%SHOPLIFTING%' 
-            OR crm_cd_desc LIKE '%THEFT%' 
-            OR crm_cd_desc LIKE '%VANDALISM%' 
-            OR crm_cd_desc LIKE '%TRESPASSING%' 
-            OR crm_cd_desc LIKE '%VEHICLE%'
-        THEN 'Property Crimes'
-        
-        -- Weapon-Related Crimes
-        WHEN crm_cd_desc LIKE '%DEADLY WEAPON%' 
-            OR crm_cd_desc LIKE '%BRANDISH%' 
-            OR crm_cd_desc LIKE '%WEAPON%'
-        THEN 'Weapon-Related Crimes'
-        
-        -- Public Order Crimes
-        WHEN crm_cd_desc LIKE '%DISTURBING THE PEACE%' 
-            OR crm_cd_desc LIKE '%TRESPASSING%'
-        THEN 'Public Order Crimes'
-        
-        -- Miscellaneous Crimes
-        WHEN crm_cd_desc LIKE '%CRUELTY%' 
-            OR crm_cd_desc LIKE '%BOMB%' 
-            OR crm_cd_desc LIKE '%OTHER%'
-        THEN 'Miscellaneous'
-        
-        -- Unknown Category
-        ELSE 'Unknown Category'
-    END AS crime_category,
-    crm_cd_desc,
-    dr_no,
-    city,
-    LAT,  
-    LON,
-    population
-FROM la_crimes_with_population
-ORDER BY full_date;
+-- -- Create the new table crime code
+-- DROP TABLE IF EXISTS la_crime_cod;
+-- CREATE TABLE la_crime_cod 
+-- ROW FORMAT DELIMITED 
+-- FIELDS TERMINATED BY ',' 
+-- STORED AS TEXTFILE 
+-- LOCATION '/user/jlee464/Project/la_new' 
+-- AS 
+-- SELECT DISTINCT 
+--     c.Crm_Cd, 
+--     c.crm_cd_desc
+-- FROM la_cri_pop c;
+
+-- -- check la_output
+-- show tables;
+-- select * from la_cricd LIMIT 5;
 
 -- check la_output
 show tables;
-select * from la_output LIMIT 300;
+select * from la_cricd LIMIT 5;
 
+------------------------------------------------------------------------
+-- Our Version create final file
+------------------------------------------------------------------------
+-- create final file
+-- Create the new table la_output
+-- DROP TABLE IF EXISTS la_output;
+-- CREATE TABLE la_output AS
+-- SELECT
+--     full_date,
+--     CASE
+--         -- Crimes Against Persons
+--         WHEN crm_cd_desc LIKE '%ASSAULT%' 
+--             OR crm_cd_desc LIKE '%HOMICIDE%' 
+--             OR crm_cd_desc LIKE '%BATTERY%' 
+--             OR crm_cd_desc LIKE '%KIDNAPPING%'
+--             OR crm_cd_desc LIKE '%SEXUAL%' 
+--             OR crm_cd_desc LIKE '%RAPE%' 
+--             OR crm_cd_desc LIKE '%CHILD ABUSE%' 
+--             OR crm_cd_desc LIKE '%INTIMATE PARTNER%' 
+--             OR crm_cd_desc LIKE '%EXTORTION%' 
+--             OR crm_cd_desc LIKE '%BRANDISH WEAPON%'
+--         THEN 'Crimes Against Persons'
+        
+--         -- Financial & Fraud-Related Crimes
+--         WHEN crm_cd_desc LIKE '%THEFT OF IDENTITY%' 
+--             OR crm_cd_desc LIKE '%FORGERY%' 
+--             OR crm_cd_desc LIKE '%FRAUD%' 
+--             OR crm_cd_desc LIKE '%STOLEN%'
+--         THEN 'Financial & Fraud-Related Crimes'
+        
+--         -- Property Crimes
+--         WHEN crm_cd_desc LIKE '%BURGLARY%' 
+--             OR crm_cd_desc LIKE '%SHOPLIFTING%' 
+--             OR crm_cd_desc LIKE '%THEFT%' 
+--             OR crm_cd_desc LIKE '%VANDALISM%' 
+--             OR crm_cd_desc LIKE '%TRESPASSING%' 
+--             OR crm_cd_desc LIKE '%VEHICLE%'
+--         THEN 'Property Crimes'
+        
+--         -- Weapon-Related Crimes
+--         WHEN crm_cd_desc LIKE '%DEADLY WEAPON%' 
+--             OR crm_cd_desc LIKE '%BRANDISH%' 
+--             OR crm_cd_desc LIKE '%WEAPON%'
+--         THEN 'Weapon-Related Crimes'
+        
+--         -- Public Order Crimes
+--         WHEN crm_cd_desc LIKE '%DISTURBING THE PEACE%' 
+--             OR crm_cd_desc LIKE '%TRESPASSING%'
+--         THEN 'Public Order Crimes'
+        
+--         -- Miscellaneous Crimes
+--         WHEN crm_cd_desc LIKE '%CRUELTY%' 
+--             OR crm_cd_desc LIKE '%BOMB%' 
+--             OR crm_cd_desc LIKE '%OTHER%'
+--         THEN 'Miscellaneous'
+        
+--         -- Unknown Category
+--         ELSE 'Unknown Category'
+--     END AS crime_category,
+--     crm_cd_desc,
+--     dr_no,
+--     city,
+--     LAT,  
+--     LON,
+--     population
+-- FROM la_crimes_with_population
+-- ORDER BY full_date;
+
+-- check la_output
+-- show tables;
+-- select * from la_output LIMIT 300;
+
+------------------------------------------------------------------------
+-- Jae Version create final file
+------------------------------------------------------------------------
+-- Create LA Master Table with 7 categories
+/* Public Order Crimes, Financial & Fraud-Related Crimes, Crimes Against Persons, Weapon-Related Crimes, Property Crimes, Unknown Category, Miscellaneous */
+
+DROP TABLE IF EXISTS la_cri_pop_cat;
+CREATE TABLE la_cri_pop_cat AS
+SELECT 
+   c.year,
+   c.full_date,
+   c.Crm_Cd,
+   c.crm_Cd_desc,
+   c.DR_NO,
+   c.city,
+   c.LAT, 
+   c.LON,
+ FORMAT_NUMBER(CAST(REGEXP_REPLACE(c.population, '[^0-9]', '') AS BIGINT), 0) AS population,
+    CASE 
+        WHEN c.crm_Cd IN (110, 113, 121, 122, 210, 220, 230, 231, 235, 236, 622, 623, 624, 625, 626, 627, 910, 920, 921, 922) 
+            THEN 'Crimes Against Persons'
+        WHEN c.crm_Cd IN (310, 320, 330, 341, 343, 350, 351, 352, 354, 420, 440, 470, 510, 485, 610) 
+            THEN 'Property Crimes'
+        WHEN c.crm_Cd IN (653, 660, 661, 668, 662, 649) 
+            THEN 'Financial & Fraud-Related Crimes'
+        WHEN c.crm_Cd IN (250, 251, 756) 
+            THEN 'Weapon-Related Crimes'
+        WHEN c.crm_Cd IN (880, 882, 884, 888) 
+            THEN 'Public Order Crimes'
+        WHEN c.crm_Cd IN (944, 948) 
+            THEN 'Miscellaneous'
+        ELSE 'Unknown Category'
+    END AS Category
+FROM 
+    la_crimes_with_population c;
+
+-- check la_output
+show tables;
+select * from la_cri_pop_cat LIMIT 300;
+
+----------------------------------------------------------------------------------
+-- Jae code 
+----------------------------------------------------------------------------------
+-- Create Anova test table
+DROP TABLE IF EXISTS la_anova;
+CREATE TABLE la_anova AS
+SELECT 
+c.year, c.Category, c.population ,COUNT(DISTINCT c.DR_NO) AS cnt, c.city
+FROM la_cri_pop_cat c
+Where c.year between 2014 and 2023
+Group By c.year, c.Category, c.population, c.city;
+
+
+select * from la_anova Order by `year`;
+
+-- Create LA Propostion 47 
+DROP TABLE IF EXISTS la_cri_pop_mis;
+CREATE TABLE la_cri_pop_mis 
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS TEXTFILE 
+LOCATION '/user/dkim171/Project/la_prop47' 
+AS 
+SELECT  
+    c.year,
+    c.full_date,
+    c.dr_no,
+    c.city,
+    c.lat,
+    c.lon,
+    CASE 
+        WHEN c.crm_cd IN (420, 440, 442, 471, 474, 654, 670, 951) THEN 'Proposition 47'
+        ELSE 'Not Proposition 47'
+    END AS prop_47_status,
+    CAST(REGEXP_REPLACE(c.population, '[^0-9]', '') AS BIGINT) AS population,
+    c.crm_cd,
+    c.crm_cd_desc
+FROM 
+    la_crimes_with_population c 
+WHERE 
+    c.crm_cd IN (420, 440, 442, 471, 474, 654, 670, 951);
+
+
+-- check table la_cri_pop_mis
+show tables;
+Select * from la_cri_pop_mis limit 100;
+
+-- check the if the table saved on the right location
+hdfs dfs -ls Project/la_prop47
+
+-- copy a final la_cri_pop_mis file from hdfs to linux
+hdfs dfs -get Project/la_prop47/000000_0
+
+--download file
+scp dkim171@129.146.230.230:/home/dkim171/000000_0 ~/Desktop/
 
 ----------------------------------------------------------------------------------
 -- Chicago final table creation --------------------------------------------------
@@ -628,10 +691,13 @@ CREATE TABLE chicago_only_nessasary_columns AS
 SELECT
     ID,
     Case_Number,
+    CAST((SUBSTR(`date`, 7, 4)) AS INT)AS c_year,
     CAST(CONCAT(SUBSTR(`date`, 7, 4), '-', SUBSTR(`date`, 1, 2), '-', SUBSTR(`date`, 4, 2)) AS DATE) AS formatted_date,
-    description
+    description,
+    'Chicago' as city
 FROM chicago_crime;
 
+-- Check table chicago_only_nessasary_columns 
 select * from chicago_only_nessasary_columns LIMIT 100;
 
 -- create chicago_crimes_with_population table
@@ -640,10 +706,11 @@ CREATE TABLE chicago_crimes_with_population AS
 SELECT
     c.ID,
     c.Case_Number,
+    c.c_year,
     c.formatted_date,
     c.description,
-    p.Population,
-    p.Year AS population_year
+    c.city,
+    p.Population
 FROM
     chicago_only_nessasary_columns c
 JOIN
@@ -657,164 +724,583 @@ ORDER BY
 show tables;
 select * from chicago_crimes_with_population LIMIT 100;
 
-
+----------------------------------------------------------------
+-- My version
+----------------------------------------------------------------
 -- create final table with categories chicago_output table
 
--- create final file
--- Create the new table la_output
-DROP TABLE IF EXISTS chicago_output;
-CREATE TABLE chicago_output AS
-SELECT 
-    id,
-    case_number,
-    formatted_date,
-    description,
+
+-- DROP TABLE IF EXISTS chicago_output;
+-- CREATE TABLE chicago_output AS
+-- SELECT 
+--     id,
+--     case_number,
+--     formatted_date,
+--     description,
+--     CASE
+--         -- Crimes Against Persons
+--         WHEN description LIKE '%AGGRAVATED%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%SIMPLE%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%STRONGARM%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%SEX ASSLT%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%CRIMINAL SEXUAL%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%CHILD%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%PO HANDS%' THEN 'Crimes Against Persons'
+--         WHEN description LIKE '%KNIFE%' THEN 'Crimes Against Persons'
+
+--         -- Financial & Fraud-Related Crimes
+--         WHEN description LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
+--         WHEN description LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
+--         WHEN description LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
+--         WHEN description LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
+--         WHEN description LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
+--         WHEN description LIKE '%THEFT OF LABOR%' THEN 'Financial & Fraud-Related Crimes'
+
+--         -- Miscellaneous
+--         WHEN description LIKE '%TELEPHONE%' THEN 'Miscellaneous'
+--         WHEN description LIKE '%HARASSMENT%' THEN 'Miscellaneous'
+--         WHEN description LIKE '%SOLICIT%' THEN 'Miscellaneous'
+--         WHEN description LIKE '%CONTRIBUTE%' THEN 'Miscellaneous'
+--         WHEN description LIKE '%VIOLATE ORDER%' THEN 'Miscellaneous'
+--         WHEN description LIKE '%OTHER CRIME%' THEN 'Miscellaneous'
+
+--         -- Property Crimes
+--         WHEN description LIKE '%$500%' THEN 'Property Crimes'
+--         WHEN description LIKE '%OVER $500%' THEN 'Property Crimes'
+--         WHEN description LIKE '%TO VEHICLE%' THEN 'Property Crimes'
+--         WHEN description LIKE '%TO PROPERTY%' THEN 'Property Crimes'
+--         WHEN description LIKE '%AUTOMOBILE%' THEN 'Property Crimes'
+--         WHEN description LIKE '%FORCIBLE ENTRY%' THEN 'Property Crimes'
+--         WHEN description LIKE '%UNLAWFUL ENTRY%' THEN 'Property Crimes'
+
+--         -- Public Order Crimes
+--         WHEN description LIKE '%POSS%' THEN 'Public Order Crimes'
+--         WHEN description LIKE '%MANU/DELIVER%' THEN 'Public Order Crimes'
+--         WHEN description LIKE '%UNLAWFUL POSS%' THEN 'Public Order Crimes'
+--         WHEN description LIKE '%LIQUOR LICENSE%' THEN 'Public Order Crimes'
+
+--         -- Unknown Category
+--         WHEN description LIKE '%PREDATORY%' THEN 'Unknown Category'
+--         WHEN description LIKE '%NON-AGGRAVATED%' THEN 'Unknown Category'
+--         WHEN description LIKE '%BOGUS CHECK%' THEN 'Unknown Category'
+--         WHEN description LIKE '%TRUCK%' THEN 'Unknown Category'
+
+--         -- Weapon-Related Crimes
+--         WHEN description LIKE '%HANDGUN%' THEN 'Weapon-Related Crimes'
+--         WHEN description LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
+--         WHEN description LIKE '%DANG WEAPON%' THEN 'Weapon-Related Crimes'
+
+--         ELSE 'Unknown Category'
+--     END AS crime_category,
+--     population
+-- FROM chicago_crimes_with_population;
+
+-- -- check chicago_output table
+-- select * from chicago_output LIMIT 300;
+
+
+----------------------------------------------------------------
+-- Jae version 
+----------------------------------------------------------------
+
+DROP TABLE IF EXISTS chi_anova;
+CREATE TABLE chi_anova AS
+SELECT
+    c.c_year,
     CASE
-        -- Crimes Against Persons
-        WHEN description LIKE '%AGGRAVATED%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%SIMPLE%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%STRONGARM%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%SEX ASSLT%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%CRIMINAL SEXUAL%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%CHILD%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%PO HANDS%' THEN 'Crimes Against Persons'
-        WHEN description LIKE '%KNIFE%' THEN 'Crimes Against Persons'
+       -- Crimes Against Persons
+       WHEN description LIKE '%AGGRAVATED%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%SIMPLE%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%STRONGARM%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%SEX ASSLT%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%CRIMINAL SEXUAL%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%CHILD%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%PO HANDS%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%KNIFE%' THEN 'Crimes Against Persons'
 
-        -- Financial & Fraud-Related Crimes
-        WHEN description LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
-        WHEN description LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
-        WHEN description LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
-        WHEN description LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
-        WHEN description LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
-        WHEN description LIKE '%THEFT OF LABOR%' THEN 'Financial & Fraud-Related Crimes'
 
-        -- Miscellaneous
-        WHEN description LIKE '%TELEPHONE%' THEN 'Miscellaneous'
-        WHEN description LIKE '%HARASSMENT%' THEN 'Miscellaneous'
-        WHEN description LIKE '%SOLICIT%' THEN 'Miscellaneous'
-        WHEN description LIKE '%CONTRIBUTE%' THEN 'Miscellaneous'
-        WHEN description LIKE '%VIOLATE ORDER%' THEN 'Miscellaneous'
-        WHEN description LIKE '%OTHER CRIME%' THEN 'Miscellaneous'
+       -- Financial & Fraud-Related Crimes
+       WHEN description LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%THEFT OF LABOR%' THEN 'Financial & Fraud-Related Crimes'
 
-        -- Property Crimes
-        WHEN description LIKE '%$500%' THEN 'Property Crimes'
-        WHEN description LIKE '%OVER $500%' THEN 'Property Crimes'
-        WHEN description LIKE '%TO VEHICLE%' THEN 'Property Crimes'
-        WHEN description LIKE '%TO PROPERTY%' THEN 'Property Crimes'
-        WHEN description LIKE '%AUTOMOBILE%' THEN 'Property Crimes'
-        WHEN description LIKE '%FORCIBLE ENTRY%' THEN 'Property Crimes'
-        WHEN description LIKE '%UNLAWFUL ENTRY%' THEN 'Property Crimes'
+       -- Miscellaneous
+       WHEN description LIKE '%TELEPHONE%' THEN 'Miscellaneous'
+       WHEN description LIKE '%HARASSMENT%' THEN 'Miscellaneous'
+       WHEN description LIKE '%SOLICIT%' THEN 'Miscellaneous'
+       WHEN description LIKE '%CONTRIBUTE%' THEN 'Miscellaneous'
+       WHEN description LIKE '%VIOLATE ORDER%' THEN 'Miscellaneous'
+       WHEN description LIKE '%OTHER CRIME%' THEN 'Miscellaneous'
 
-        -- Public Order Crimes
-        WHEN description LIKE '%POSS%' THEN 'Public Order Crimes'
-        WHEN description LIKE '%MANU/DELIVER%' THEN 'Public Order Crimes'
-        WHEN description LIKE '%UNLAWFUL POSS%' THEN 'Public Order Crimes'
-        WHEN description LIKE '%LIQUOR LICENSE%' THEN 'Public Order Crimes'
+       -- Property Crimes
+       WHEN description LIKE '%$500%' THEN 'Property Crimes'
+       WHEN description LIKE '%OVER $500%' THEN 'Property Crimes'
+       WHEN description LIKE '%TO VEHICLE%' THEN 'Property Crimes'
+       WHEN description LIKE '%TO PROPERTY%' THEN 'Property Crimes'
+       WHEN description LIKE '%AUTOMOBILE%' THEN 'Property Crimes'
+       WHEN description LIKE '%FORCIBLE ENTRY%' THEN 'Property Crimes'
+       WHEN description LIKE '%UNLAWFUL ENTRY%' THEN 'Property Crimes'
 
-        -- Unknown Category
-        WHEN description LIKE '%PREDATORY%' THEN 'Unknown Category'
-        WHEN description LIKE '%NON-AGGRAVATED%' THEN 'Unknown Category'
-        WHEN description LIKE '%BOGUS CHECK%' THEN 'Unknown Category'
-        WHEN description LIKE '%TRUCK%' THEN 'Unknown Category'
+       -- Public Order Crimes
+       WHEN description LIKE '%POSS%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%MANU/DELIVER%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%UNLAWFUL POSS%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%LIQUOR LICENSE%' THEN 'Public Order Crimes'
 
-        -- Weapon-Related Crimes
-        WHEN description LIKE '%HANDGUN%' THEN 'Weapon-Related Crimes'
-        WHEN description LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
-        WHEN description LIKE '%DANG WEAPON%' THEN 'Weapon-Related Crimes'
+       -- Unknown Category
+       WHEN description LIKE '%PREDATORY%' THEN 'Unknown Category'
+       WHEN description LIKE '%NON-AGGRAVATED%' THEN 'Unknown Category'
+       WHEN description LIKE '%BOGUS CHECK%' THEN 'Unknown Category'
+       WHEN description LIKE '%TRUCK%' THEN 'Unknown Category'
 
-        ELSE 'Unknown Category'
-    END AS crime_category,
-    population
-FROM chicago_crimes_with_population;
+       -- Weapon-Related Crimes
+       WHEN description LIKE '%HANDGUN%' THEN 'Weapon-Related Crimes'
+       WHEN description LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
+       WHEN description LIKE '%DANG WEAPON%' THEN 'Weapon-Related Crimes'
 
--- check chicago_output table
-select * from chicago_output LIMIT 300;
+       ELSE 'Unknown Category'
+   END AS category,
+   c.population,
+   count (DISTINCT case_number) AS cnt,
+   c.city
+FROM chicago_crimes_with_population c
+where c.c_year between 2014 and 2023
+Group by 
+c.c_year,
+c.population,
+   CASE
+       -- Crimes Against Persons
+       WHEN description LIKE '%AGGRAVATED%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%SIMPLE%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%STRONGARM%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%SEX ASSLT%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%CRIMINAL SEXUAL%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%CHILD%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%PO HANDS%' THEN 'Crimes Against Persons'
+       WHEN description LIKE '%KNIFE%' THEN 'Crimes Against Persons'
+
+
+       -- Financial & Fraud-Related Crimes
+       WHEN description LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
+       WHEN description LIKE '%THEFT OF LABOR%' THEN 'Financial & Fraud-Related Crimes'
+
+
+       -- Miscellaneous
+       WHEN description LIKE '%TELEPHONE%' THEN 'Miscellaneous'
+       WHEN description LIKE '%HARASSMENT%' THEN 'Miscellaneous'
+       WHEN description LIKE '%SOLICIT%' THEN 'Miscellaneous'
+       WHEN description LIKE '%CONTRIBUTE%' THEN 'Miscellaneous'
+       WHEN description LIKE '%VIOLATE ORDER%' THEN 'Miscellaneous'
+       WHEN description LIKE '%OTHER CRIME%' THEN 'Miscellaneous'
+
+
+       -- Property Crimes
+       WHEN description LIKE '%$500%' THEN 'Property Crimes'
+       WHEN description LIKE '%OVER $500%' THEN 'Property Crimes'
+       WHEN description LIKE '%TO VEHICLE%' THEN 'Property Crimes'
+       WHEN description LIKE '%TO PROPERTY%' THEN 'Property Crimes'
+       WHEN description LIKE '%AUTOMOBILE%' THEN 'Property Crimes'
+       WHEN description LIKE '%FORCIBLE ENTRY%' THEN 'Property Crimes'
+       WHEN description LIKE '%UNLAWFUL ENTRY%' THEN 'Property Crimes'
+
+
+       -- Public Order Crimes
+       WHEN description LIKE '%POSS%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%MANU/DELIVER%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%UNLAWFUL POSS%' THEN 'Public Order Crimes'
+       WHEN description LIKE '%LIQUOR LICENSE%' THEN 'Public Order Crimes'
+
+
+       -- Unknown Category
+       WHEN description LIKE '%PREDATORY%' THEN 'Unknown Category'
+       WHEN description LIKE '%NON-AGGRAVATED%' THEN 'Unknown Category'
+       WHEN description LIKE '%BOGUS CHECK%' THEN 'Unknown Category'
+       WHEN description LIKE '%TRUCK%' THEN 'Unknown Category'
+
+
+       -- Weapon-Related Crimes
+       WHEN description LIKE '%HANDGUN%' THEN 'Weapon-Related Crimes'
+       WHEN description LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
+       WHEN description LIKE '%DANG WEAPON%' THEN 'Weapon-Related Crimes'
+
+
+       ELSE 'Unknown Category'
+   END,
+   c.city;
+
+
+-- check chicago_anova table
+select * from chi_anova LIMIT 7;
 
 ----------------------------------------------------------------------------------
 -- Dallas final table creation ---------------------------------------------------
 ----------------------------------------------------------------------------------
 -- create clear table without null
-DROP TABLE IF EXISTS dallas_only_nessasary_columns;
-CREATE TABLE dallas_only_nessasary_columns AS
-SELECT 
-    Incident_Number,
-    CAST(date1_of_occurrence AS DATE) AS formatted_date,
-    type_of_incident
+
+----------------------------------------------------------------------------------
+-- My version
+----------------------------------------------------------------------------------
+-- DROP TABLE IF EXISTS dallas_only_nessasary_columns;
+-- CREATE TABLE dallas_only_nessasary_columns AS
+-- SELECT 
+--     Incident_Number,
+--     CAST(date1_of_occurrence AS DATE) AS formatted_date,
+--     type_of_incident
+-- from dallas_crime where incident_number not in('DALLAS') and incident_number not LIKE '(%';
+
+
+-- check if table exists
+-- show tables;
+-- select * from dallas_only_nessasary_columns LIMIT 10;
+
+----------------------------------------------------------------------------------
+-- Jae version
+----------------------------------------------------------------------------------
+-- create clear table without null
+DROP TABLE IF EXISTS dal_crisim;
+CREATE TABLE dal_crisim AS
+SELECT
+   Incident_Number,
+   cast(Year_of_Incident AS int) AS c_year,
+   type_of_incident
 from dallas_crime where incident_number not in('DALLAS') and incident_number not LIKE '(%';
 
 -- check if table exists
 show tables;
-select * from dallas_only_nessasary_columns LIMIT 10;
+select * from dal_crisim LIMIT 10;
 
+-- select distinct type_of_incident
+DROP TABLE IF EXISTS dal_cridesc;
+CREATE TABLE dal_cridesc
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS TEXTFILE 
+LOCATION '/user/dkim171/Project/dal_new' 
+AS 
+select distinct type_of_incident from dal_crisim;
+
+-- remove previous file from the server 
+rm 000000_0
+
+-- check if file exists
+hdfs dfs -ls Project/dal_new
+
+-- move file to the server
+hdfs dfs -get Project/dal_new/000000_0
+
+-- move file to the local pc
+scp dkim171@129.146.230.230:/home/dkim171/000000_0 ~/Desktop/
+
+----------------------------------------------------------------
+-- My version
+----------------------------------------------------------------
 -- create final table dallas_output
-DROP TABLE IF EXISTS dallas_output;
-CREATE TABLE dallas_output AS
-SELECT 
-    incident_number, 
-    formatted_date, 
-    type_of_incident,
-    CASE 
-        -- Crimes Against Persons
-        WHEN type_of_incident LIKE '%ASSAULT%' 
-            OR type_of_incident LIKE '%HOMICIDE%' 
-            OR type_of_incident LIKE '%MURDER%' 
-            OR type_of_incident LIKE '%KIDNAPPING%' 
-            OR type_of_incident LIKE '%MANSLAUGHTER%' 
-            OR type_of_incident LIKE '%DEADLY CONDUCT%' 
-            OR type_of_incident LIKE '%SEXUAL%' 
-            OR type_of_incident LIKE '%TERRORISTIC THREAT%' 
-        THEN 'Crimes Against Persons'
+-- DROP TABLE IF EXISTS dallas_output;
+-- CREATE TABLE dallas_output AS
+-- SELECT 
+--     incident_number, 
+--     formatted_date, 
+--     type_of_incident,
+--     CASE 
+--         -- Crimes Against Persons
+--         WHEN type_of_incident LIKE '%ASSAULT%' 
+--             OR type_of_incident LIKE '%HOMICIDE%' 
+--             OR type_of_incident LIKE '%MURDER%' 
+--             OR type_of_incident LIKE '%KIDNAPPING%' 
+--             OR type_of_incident LIKE '%MANSLAUGHTER%' 
+--             OR type_of_incident LIKE '%DEADLY CONDUCT%' 
+--             OR type_of_incident LIKE '%SEXUAL%' 
+--             OR type_of_incident LIKE '%TERRORISTIC THREAT%' 
+--         THEN 'Crimes Against Persons'
         
-        -- Financial & Fraud-Related Crimes
-        WHEN type_of_incident LIKE '%FRAUD%' 
-            OR type_of_incident LIKE '%THEFT OF PROP%' 
-            OR type_of_incident LIKE '%FORGERY%' 
-            OR type_of_incident LIKE '%CREDIT CARD%' 
-            OR type_of_incident LIKE '%TRADEMARK%' 
-        THEN 'Financial & Fraud-Related Crimes'
+--         -- Financial & Fraud-Related Crimes
+--         WHEN type_of_incident LIKE '%FRAUD%' 
+--             OR type_of_incident LIKE '%THEFT OF PROP%' 
+--             OR type_of_incident LIKE '%FORGERY%' 
+--             OR type_of_incident LIKE '%CREDIT CARD%' 
+--             OR type_of_incident LIKE '%TRADEMARK%' 
+--         THEN 'Financial & Fraud-Related Crimes'
         
-        -- Miscellaneous
-        WHEN type_of_incident LIKE '%MISCELLANEOUS%' 
-            OR type_of_incident LIKE '%LOST PROPERTY%' 
-            OR type_of_incident LIKE '%SUSPICIOUS%' 
-            OR type_of_incident LIKE '%RECOVERED%'
-        THEN 'Miscellaneous'
+--         -- Miscellaneous
+--         WHEN type_of_incident LIKE '%MISCELLANEOUS%' 
+--             OR type_of_incident LIKE '%LOST PROPERTY%' 
+--             OR type_of_incident LIKE '%SUSPICIOUS%' 
+--             OR type_of_incident LIKE '%RECOVERED%'
+--         THEN 'Miscellaneous'
         
-        -- Property Crimes
-        WHEN type_of_incident LIKE '%BURGLARY%' 
-            OR type_of_incident LIKE '%THEFT%' 
-            OR type_of_incident LIKE '%ARSON%' 
-            OR type_of_incident LIKE '%CRIM MISCHIEF%' 
-        THEN 'Property Crimes'
+--         -- Property Crimes
+--         WHEN type_of_incident LIKE '%BURGLARY%' 
+--             OR type_of_incident LIKE '%THEFT%' 
+--             OR type_of_incident LIKE '%ARSON%' 
+--             OR type_of_incident LIKE '%CRIM MISCHIEF%' 
+--         THEN 'Property Crimes'
         
-        -- Public Order Crimes
-        WHEN type_of_incident LIKE '%PUBLIC INTOX%' 
-            OR type_of_incident LIKE '%DISORDERLY CONDUCT%' 
-            OR type_of_incident LIKE '%GAMBLING%' 
-            OR type_of_incident LIKE '%HARASSMENT%' 
-            OR type_of_incident LIKE '%URINATING%' 
-        THEN 'Public Order Crimes'
+--         -- Public Order Crimes
+--         WHEN type_of_incident LIKE '%PUBLIC INTOX%' 
+--             OR type_of_incident LIKE '%DISORDERLY CONDUCT%' 
+--             OR type_of_incident LIKE '%GAMBLING%' 
+--             OR type_of_incident LIKE '%HARASSMENT%' 
+--             OR type_of_incident LIKE '%URINATING%' 
+--         THEN 'Public Order Crimes'
         
-        -- Weapon-Related Crimes
-        WHEN type_of_incident LIKE '%UNLAWFUL CARRY%' 
-            OR type_of_incident LIKE '%WEAPON%' 
-            OR type_of_incident LIKE '%FIREARM%' 
-            OR type_of_incident LIKE '%KNIFE%' 
-        THEN 'Weapon-Related Crimes'
+--         -- Weapon-Related Crimes
+--         WHEN type_of_incident LIKE '%UNLAWFUL CARRY%' 
+--             OR type_of_incident LIKE '%WEAPON%' 
+--             OR type_of_incident LIKE '%FIREARM%' 
+--             OR type_of_incident LIKE '%KNIFE%' 
+--         THEN 'Weapon-Related Crimes'
         
-        -- Unknown Category
-        ELSE 'Unknown Category'
-    END AS incident_category
-FROM dallas_only_nessasary_columns;
+--         -- Unknown Category
+--         ELSE 'Unknown Category'
+--     END AS incident_category
+-- FROM dallas_only_nessasary_columns;
+
+-- -- check if table exists
+-- show tables;
+-- select * from dallas_output LIMIT 10;
+
+----------------------------------------------------------------
+-- Jae version full to the end of the file
+----------------------------------------------------------------
+
+-- create final table dallas_anova
+DROP TABLE IF EXISTS dal_anova;
+CREATE TABLE dal_anova AS
+SELECT
+  c_year,
+  category,
+  population,
+  cnt,
+  'Dallas' AS city
+FROM (
+  SELECT
+    c.c_year,
+    CASE
+      -- Crimes Against Persons
+      WHEN c.type_of_incident LIKE '%ASSAULT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%HOMICIDE%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%KIDNAPPING%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%DEADLY CONDUCT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%THREAT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%INJURY%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%MANSLAUGHTER%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%SEXUAL ASSAULT%' THEN 'Crimes Against Persons'
+      
+      -- Property Crimes
+      WHEN c.type_of_incident LIKE '%THEFT%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%BURGLARY%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%ROBBERY%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%GRAFFITI%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%VANDALISM%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%CRIMINAL MISCHIEF%' THEN 'Property Crimes'
+      
+      -- Financial & Fraud-Related Crimes
+      WHEN c.type_of_incident LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%COUNTERFEIT%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%TAMPER%' THEN 'Financial & Fraud-Related Crimes'
+      
+      -- Weapon-Related Crimes
+      WHEN c.type_of_incident LIKE '%FIREARM%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%WEAPON%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%UNLAWFUL CARRY%' THEN 'Weapon-Related Crimes'
+      
+      -- Public Order Crimes
+      WHEN c.type_of_incident LIKE '%DISORDERLY CONDUCT%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%PUBLIC INTOXICATION%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%LOITERING%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%RIOT%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%HARASSMENT%' THEN 'Public Order Crimes'
+      
+      -- Miscellaneous
+      WHEN c.type_of_incident LIKE '%GAMBLING%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%DUMPING%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNAUTHORIZED USE%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNREGISTERED%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNLAWFUL%' THEN 'Miscellaneous'
+      
+      -- Unknown Category
+      ELSE 'Unknown Category'
+    END AS category,
+    p.population,
+    COUNT(DISTINCT c.incident_number) AS cnt
+  FROM
+    dal_crisim c
+  LEFT JOIN
+    dallas_population p ON c.c_year = p.year
+  WHERE
+    c.c_year IS NOT NULL
+    AND c.c_year BETWEEN 2014 AND 2023
+  GROUP BY
+    c.c_year,
+    CASE
+      WHEN c.type_of_incident LIKE '%ASSAULT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%HOMICIDE%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%KIDNAPPING%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%DEADLY CONDUCT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%THREAT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%INJURY%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%MANSLAUGHTER%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%SEXUAL ASSAULT%' THEN 'Crimes Against Persons'
+      WHEN c.type_of_incident LIKE '%THEFT%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%BURGLARY%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%ROBBERY%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%GRAFFITI%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%VANDALISM%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%CRIMINAL MISCHIEF%' THEN 'Property Crimes'
+      WHEN c.type_of_incident LIKE '%FRAUD%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%EMBEZZLEMENT%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%FORGERY%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%CREDIT CARD%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%FINANCIAL%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%COUNTERFEIT%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%TAMPER%' THEN 'Financial & Fraud-Related Crimes'
+      WHEN c.type_of_incident LIKE '%FIREARM%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%WEAPON%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%KNIFE%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%UNLAWFUL CARRY%' THEN 'Weapon-Related Crimes'
+      WHEN c.type_of_incident LIKE '%DISORDERLY CONDUCT%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%PUBLIC INTOXICATION%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%LOITERING%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%RIOT%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%HARASSMENT%' THEN 'Public Order Crimes'
+      WHEN c.type_of_incident LIKE '%GAMBLING%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%DUMPING%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNAUTHORIZED USE%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNREGISTERED%' THEN 'Miscellaneous'
+      WHEN c.type_of_incident LIKE '%UNLAWFUL%' THEN 'Miscellaneous'
+      ELSE 'Unknown Category'
+    END,
+    p.population
+) subquery;
 
 -- check if table exists
 show tables;
-select * from dallas_output LIMIT 10;
+select * from dal_anova LIMIT 10;
+select DISTINCT c_year from dal_anova;
 
 
+----------------------------------------------------------------------------------
+-- Austin Anova table creation ---------------------------------------------------
+----------------------------------------------------------------------------------
+-- create clear table without null
+
+DROP TABLE IF EXISTS aus_crisim;
+CREATE TABLE aus_crisim AS
+SELECT
+    Incident_Number,
+    Highest_Offense_Description,
+    Highest_Offense_Code,
+    CAST(SUBSTR(Occurred_Date, 7, 4) AS INT) AS c_year,
+    'Austin' AS city
+FROM
+    austin_crime;
+
+-- check table aus_crisim
+select * from aus_crisim limit 5;
+
+-- select distinct type_of_incident
+DROP TABLE IF EXISTS aus_cridesc;
+CREATE TABLE aus_cridesc
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS TEXTFILE 
+LOCATION '/user/dkim171/Project/aus_new' 
+AS 
+select distinct Highest_Offense_Code, Highest_Offense_Description from aus_crisim;
+
+--download file to prepare categories
+ls
+rm 000000_0
+hdfs dfs -ls Project/aus_new
+hdfs dfs -get Project/aus_new/000000_0
+scp dkim171@129.146.230.230:/home/dkim171/000000_0 ~/Desktop/
+
+-- create final table Austin_anova
+
+DROP TABLE IF EXISTS aus_anova;
+CREATE TABLE aus_anova AS 
+SELECT 
+    c.c_year,
+CASE
+  WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Violent Crimes'
+  WHEN c.Highest_Offense_Code IN (200, 202, 204, 206, 208, 8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Sexual Crimes'
+  WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
+  WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Drug Crimes'
+  WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Traffic Offenses'
+  WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Public Order Crimes'
+  ELSE 'Other Crimes'
+END AS Category,
+p.population,
+count(DISTINCT c.Incident_Number) as cnt,
+c.city
+from aus_crisim c
+Left Join austin_population p on c.c_year = p.year
+where c.c_year between 2014 and 2023
+GROUP By 
+    c.c_year,
+CASE
+  WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Violent Crimes'
+  WHEN c.Highest_Offense_Code IN (200, 202, 204, 206, 208, 8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Sexual Crimes'
+  WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
+  WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Drug Crimes'
+  WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Traffic Offenses'
+  WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Public Order Crimes'
+  ELSE 'Other Crimes'
+END,
+p.population,
+c.city;
+
+SELECT * from aus_anova limit 5;
+SELECT DISTINCT c_year from aus_anova;
+
+--create combined_anova table
+DROP TABLE IF EXISTS combined_anova;
+CREATE TABLE combined_anova AS
+SELECT * FROM la_anova
+UNION ALL
+SELECT * FROM chi_anova
+UNION ALL
+SELECT * FROM dal_anova
+UNION ALL
+SELECT * FROM aus_anova;
+
+-- check table combined_anova
+SELECT * FROM combined_anova;
+
+--Export as csv file
+DROP TABLE IF EXISTS com_anova;
+CREATE TABLE com_anova
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS TEXTFILE 
+LOCATION '/user/dkim171/Project/anova' 
+AS 
+SELECT
+  `year`,
+  category,
+  CAST(REGEXP_REPLACE(population, '[^0-9]', '') AS BIGINT) AS population,
+  cnt,
+  city
+FROM 
+  combined_anova;
+
+-- check table com_anova;
+SELECT * FROM com_anova;
 
 
-
-
-
-
+rm 000000_0
+hdfs dfs -ls Project/anova
+hdfs dfs -get Project/anova/000000_0
+scp dkim171@129.146.230.230:/home/dkim171/000000_0 ~/Desktop/
