@@ -494,26 +494,28 @@ ORDER BY
 show tables;
 select * from la_crimes_with_population LIMIT 100;
 
--- -- Create the new table crime code
--- DROP TABLE IF EXISTS la_crime_cod;
--- CREATE TABLE la_crime_cod 
--- ROW FORMAT DELIMITED 
--- FIELDS TERMINATED BY ',' 
--- STORED AS TEXTFILE 
--- LOCATION '/user/jlee464/Project/la_new' 
--- AS 
--- SELECT DISTINCT 
---     c.Crm_Cd, 
---     c.crm_cd_desc
--- FROM la_cri_pop c;
+----------------------------------------------------------------
+-- Jae code 
+----------------------------------------------------------------
+-- Create the new table crime code
+DROP TABLE IF EXISTS la_cricd;
+CREATE TABLE la_cricd 
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',' 
+STORED AS TEXTFILE 
+LOCATION '/user/dkim171/Project/la_new' 
+AS 
+SELECT DISTINCT 
+    c.Crm_Cd, 
+    c.crm_cd_desc
+FROM la_crimes_with_population c;
 
--- -- check la_output
--- show tables;
--- select * from la_cricd LIMIT 5;
+
 
 -- check la_output
 show tables;
 select * from la_cricd LIMIT 5;
+
 
 ------------------------------------------------------------------------
 -- Our Version create final file
@@ -1227,40 +1229,48 @@ hdfs dfs -ls Project/aus_new
 hdfs dfs -get Project/aus_new/000000_0
 scp dkim171@129.146.230.230:/home/dkim171/000000_0 ~/Desktop/
 
--- create final table Austin_anova
 
+-- create final table Austin_anova
 DROP TABLE IF EXISTS aus_anova;
-CREATE TABLE aus_anova AS 
-SELECT 
+CREATE TABLE aus_anova AS
+SELECT
     c.c_year,
-CASE
-  WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Violent Crimes'
-  WHEN c.Highest_Offense_Code IN (200, 202, 204, 206, 208, 8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Sexual Crimes'
-  WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
-  WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Drug Crimes'
-  WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Traffic Offenses'
-  WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Public Order Crimes'
-  ELSE 'Other Crimes'
-END AS Category,
-p.population,
-count(DISTINCT c.Incident_Number) as cnt,
-c.city
-from aus_crisim c
-Left Join austin_population p on c.c_year = p.year
-where c.c_year between 2014 and 2023
-GROUP By 
+    CASE
+        -- Crimes Against Persons
+        WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Crimes Against Persons'
+        -- Property Crimes
+        WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
+        -- Financial & Fraud-Related Crimes
+        WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Financial & Fraud-Related Crimes'
+        -- Public Order Crimes
+        WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Public Order Crimes'
+        -- Weapon-Related Crimes
+        WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Weapon-Related Crimes'
+        -- Miscellaneous
+        WHEN c.Highest_Offense_Code IN (8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Miscellaneous'
+        -- Unknown Category
+        ELSE 'Unknown Category'
+    END AS Category,
+    p.population,
+    COUNT(DISTINCT c.Incident_Number) AS cnt,
+    c.city
+FROM
+    aus_crisim c
+LEFT JOIN
+    austin_population p ON c.c_year = p.year
+GROUP BY
     c.c_year,
-CASE
-  WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Violent Crimes'
-  WHEN c.Highest_Offense_Code IN (200, 202, 204, 206, 208, 8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Sexual Crimes'
-  WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
-  WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Drug Crimes'
-  WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Traffic Offenses'
-  WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Public Order Crimes'
-  ELSE 'Other Crimes'
-END,
-p.population,
-c.city;
+    CASE
+        WHEN c.Highest_Offense_Code IN (100, 101, 102, 103, 104, 106, 108, 202, 206, 2105, 2109, 2801, 300, 302, 303, 305, 402, 403, 406, 407, 408, 411, 900, 901, 902, 903, 906, 909, 911, 2011, 2012, 2013, 405, 4111) THEN 'Crimes Against Persons'
+        WHEN c.Highest_Offense_Code IN (500, 501, 502, 504, 600, 601, 602, 603, 604, 605, 606, 608, 609, 611, 612, 613, 614, 615, 617, 618, 619, 620, 621, 622, 700, 800, 802, 803, 804, 8503, 1400, 1401, 1402, 3817, 3832, 1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1103, 1104, 1105, 1106, 1112, 1113, 1114, 1198, 1199, 1200, 1201, 1202, 1300, 4022, 4027) THEN 'Property Crimes'
+        WHEN c.Highest_Offense_Code IN (1800, 1801, 1802, 1803, 1804, 1805, 1806, 1807, 1808, 1809, 1810, 1811, 1812, 1813, 1814, 1815, 1818, 1819, 1820, 1821, 1822, 1823, 1824, 1825, 1826, 1827, 1828) THEN 'Financial & Fraud-Related Crimes'
+        WHEN c.Highest_Offense_Code IN (2100, 2102, 2103, 2104, 2105, 2106, 2107, 2108, 2109, 2110, 2111, 2724, 2728, 3604) THEN 'Public Order Crimes'
+        WHEN c.Highest_Offense_Code IN (2400, 2401, 2402, 2403, 2404, 2405, 2406, 2408, 2409, 2410, 2411, 2413, 2415, 2416, 2417, 2500, 2606, 2732, 2735, 2736, 3212, 3213, 3215, 3216, 3220, 3221, 3223, 3294, 3295, 3296, 3297, 3298, 3299, 3300, 3301, 3302, 3303, 3304, 3305, 3306, 3400, 3401, 3402, 3414, 3442, 3458, 3459, 3720, 3722, 3724, 3829) THEN 'Weapon-Related Crimes'
+        WHEN c.Highest_Offense_Code IN (8905, 1600, 1601, 1602, 1603, 1604, 1700, 1701, 1706, 1707, 1709, 1710, 1712, 1715, 1718, 1719, 1722, 1724, 1725, 2014, 2600, 2601, 2602, 2603, 2605, 2609, 2610, 2611, 2612, 2613, 2614, 4199) THEN 'Miscellaneous'
+        ELSE 'Unknown Category'
+    END,
+    p.population,
+    c.city;
 
 SELECT * from aus_anova limit 5;
 SELECT DISTINCT c_year from aus_anova;
@@ -1298,7 +1308,6 @@ FROM
 
 -- check table com_anova;
 SELECT * FROM com_anova;
-
 
 rm 000000_0
 hdfs dfs -ls Project/anova
