@@ -452,8 +452,8 @@ select * from la_crime_union LIMIT 10;
 ----------------------------------------------------------------------------------
 -- LA final table creation -------------------------------------------------------
 ----------------------------------------------------------------------------------
-DROP TABLE IF EXISTS la_only_nessasary_columns;
-CREATE TABLE la_only_nessasary_columns AS
+DROP TABLE IF EXISTS la_simple;
+CREATE TABLE la_simple AS
 SELECT 
     CAST((SUBSTR(Date_rpt, 7, 4)) AS INT)AS `year`, 
     CAST(CONCAT(SUBSTR(date_rpt, 7, 4), '-', SUBSTR(date_rpt, 1, 2), '-', SUBSTR(date_rpt, 4, 2)) AS DATE) AS full_date,
@@ -493,28 +493,6 @@ ORDER BY
 -- check la_crimes_with_population
 show tables;
 select * from la_crimes_with_population LIMIT 100;
-
-----------------------------------------------------------------
--- Jae code 
-----------------------------------------------------------------
--- Create the new table crime code
-DROP TABLE IF EXISTS la_cricd;
-CREATE TABLE la_cricd 
-ROW FORMAT DELIMITED 
-FIELDS TERMINATED BY ',' 
-STORED AS TEXTFILE 
-LOCATION '/user/dkim171/Project/la_new' 
-AS 
-SELECT DISTINCT 
-    c.Crm_Cd, 
-    c.crm_cd_desc
-FROM la_crimes_with_population c;
-
-
-
--- check la_output
-show tables;
-select * from la_cricd LIMIT 5;
 
 
 ------------------------------------------------------------------------
@@ -628,6 +606,16 @@ FROM
 -- check la_output
 show tables;
 select * from la_cri_pop_cat LIMIT 300;
+
+
+
+
+
+
+
+
+
+
 
 ----------------------------------------------------------------------------------
 -- Jae code 
